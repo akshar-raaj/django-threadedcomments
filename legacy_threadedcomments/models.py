@@ -45,7 +45,7 @@ class ThreadedCommentManager(models.Manager):
     the retrieval of comments in tree form and also has utility methods for
     creating and retrieving objects related to a specific content object.
     """
-    def get_tree(self, content_object, root=None):
+    def get_tree(self, content_object, root=None, recent_first=False):
         """
         Runs a depth-first search on all comments related to the given content_object.
         This depth-first search adds a ``depth`` attribute to the comment which
@@ -63,10 +63,15 @@ class ThreadedCommentManager(models.Manager):
             {% endfor %}
         """
         content_type = ContentType.objects.get_for_model(content_object)
-        children = list(self.get_query_set().filter(
+        children = self.get_query_set().filter(
             content_type = content_type,
             object_id = getattr(content_object, 'pk', getattr(content_object, 'id')),
-        ).select_related().order_by('date_submitted'))
+        ).select_related()
+        if recent_first:
+            children = children.order_by('-date_submitted')
+        else:
+            children = children.order_by('date_submitted')
+        children = list(children)
         to_return = []
         if root:
             if isinstance(root, int):
