@@ -190,6 +190,23 @@ def do_get_threaded_comment_tree(parser, token):
     else:
         raise template.TemplateSyntaxError(error_string)
 
+def do_get_threaded_comment_tree_recent_first(parser, token):
+    """
+    Gets a tree (list of objects ordered by preorder tree traversal, and with an
+    additional ``depth`` integer attribute annotated onto each ``ThreadedComment``.
+    """
+    error_string = "%r tag must be of format {%% get_threaded_comment_tree for OBJECT [TREE_ROOT] as CONTEXT_VARIABLE %%}" % token.contents.split()[0]
+    try:
+        split = token.split_contents()
+    except ValueError:
+        raise template.TemplateSyntaxError(error_string)
+    if len(split) == 5:
+        return CommentTreeNode(split[2], split[4], split[3], recent_first=True)
+    elif len(split) == 6:
+        return CommentTreeNode(split[2], split[5], split[3], recent_first=True)
+    else:
+        raise template.TemplateSyntaxError(error_string)
+
 def do_get_free_threaded_comment_tree(parser, token):
     """
     Gets a tree (list of objects ordered by traversing tree in preorder, and with an
@@ -207,12 +224,30 @@ def do_get_free_threaded_comment_tree(parser, token):
     else:
         raise template.TemplateSyntaxError(error_string)
 
+def do_get_free_threaded_comment_tree_recent_first(parser, token):
+    """
+    Gets a tree (list of objects ordered by traversing tree in preorder, and with an
+    additional ``depth`` integer attribute annotated onto each ``FreeThreadedComment.``
+    """
+    error_string = "%r tag must be of format {%% get_free_threaded_comment_tree for OBJECT [TREE_ROOT] as CONTEXT_VARIABLE %%}" % token.contents.split()[0]
+    try:
+        split = token.split_contents()
+    except ValueError:
+        raise template.TemplateSyntaxError(error_string)
+    if len(split) == 5:
+        return FreeCommentTreeNode(split[2], split[4], split[3], recent_first=True)
+    elif len(split) == 6:
+        return FreeCommentTreeNode(split[2], split[5], split[3], recent_first=True)
+    else:
+        raise template.TemplateSyntaxError(error_string)
+
 class CommentTreeNode(template.Node):
-    def __init__(self, content_object, context_name, tree_root):
+    def __init__(self, content_object, context_name, tree_root, recent_first=False):
         self.content_object = template.Variable(content_object)
         self.tree_root = template.Variable(tree_root)
         self.tree_root_str = tree_root
         self.context_name = context_name
+        self.recent_first = recent_first
     def render(self, context):
         content_object = self.content_object.resolve(context)
         try:
@@ -225,15 +260,17 @@ class CommentTreeNode(template.Node):
                     tree_root = int(self.tree_root_str)
                 except ValueError:
                     tree_root = self.tree_root_str
-        context[self.context_name] = ThreadedComment.public.get_tree(content_object, root=tree_root)
+        recent_first = self.recent_first
+        context[self.context_name] = ThreadedComment.public.get_tree(content_object, root=tree_root, recent_first=recent_first)
         return ''
 
 class FreeCommentTreeNode(template.Node):
-    def __init__(self, content_object, context_name, tree_root):
+    def __init__(self, content_object, context_name, tree_root, recent_first=False):
         self.content_object = template.Variable(content_object)
         self.tree_root = template.Variable(tree_root)
         self.tree_root_str = tree_root
         self.context_name = context_name
+        self.recent_first = recent_first
     def render(self, context):
         content_object = self.content_object.resolve(context)
         try:
@@ -246,7 +283,8 @@ class FreeCommentTreeNode(template.Node):
                     tree_root = int(self.tree_root_str)
                 except ValueError:
                     tree_root = self.tree_root_str
-        context[self.context_name] = FreeThreadedComment.public.get_tree(content_object, root=tree_root)
+        recent_first = self.recent_first
+        context[self.context_name] = FreeThreadedComment.public.get_tree(content_object, root=tree_root, recent_first=recent_first)
         return ''
 
 def do_get_comment_count(parser, token):
@@ -424,7 +462,9 @@ register.filter('oneline', oneline)
 
 register.tag('auto_transform_markup', do_auto_transform_markup)
 register.tag('get_threaded_comment_tree', do_get_threaded_comment_tree)
+register.tag('get_threaded_comment_tree_recent_first', do_get_threaded_comment_tree_recent_first)
 register.tag('get_free_threaded_comment_tree', do_get_free_threaded_comment_tree)
+register.tag('get_free_threaded_comment_tree_recent_first', do_get_free_threaded_comment_tree_recent_first)
 register.tag('get_comment_count', do_get_comment_count)
 register.tag('get_free_comment_count', do_get_free_comment_count)
 register.tag('get_free_threaded_comment_form', do_get_threaded_comment_form)
